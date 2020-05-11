@@ -6,6 +6,7 @@ import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -14,7 +15,9 @@ import java.util.Random;
 
 @RestController
 public class UserController {
+
     List<User> list =  new ArrayList<User>();
+    List<String> log =  new ArrayList<String>();
 
     public UserController() { list.add(new User("Roman","Simko","roman","heslo")); }
 
@@ -41,6 +44,7 @@ public class UserController {
                 String token = generateToken();
                 response.put("token", token);
                 loggedUser.setToken(token);
+                writeLog("login", loggedUser.getLogin());
                 return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body(response.toString());
             }
             else {
@@ -106,6 +110,7 @@ public class UserController {
         User user = getUser(login);
         if (user != null && isTokenValid(token)) {
             user.setToken(null);
+            writeLog("logout", user.getLogin());
             return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body("{}");
         }
         JSONObject response = new JSONObject();
@@ -182,5 +187,76 @@ public class UserController {
             return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body(object.toString());
         }
         else return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body("{\"error\":\"Invalid token\")");
+    }
+
+    @RequestMapping(method = RequestMethod.POST, value = "/changepassword")
+    public ResponseEntity<String> changePassword(@RequestBody String data) {
+        JSONObject object = new JSONObject(data);
+        if (object.has("oldpassword") && object.has("newpassword") && object.has("login")) {
+            String login = object.getString("login");
+            String oldpassword = object.getString("oldpassword");
+            String newpassword = object.getString("newpassword");
+            if (oldpassword.isEmpty() || newpassword.isEmpty()) {
+                JSONObject response = new JSONObject();
+                response.put("error", "Passwords are mandatory fields");
+                return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(response.toString());
+            }
+            if (!existLogin(login) || !checkPassword(login, oldpassword)) {
+                JSONObject response = new JSONObject();
+                response.put("error", "Invalid login or password");
+                return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(response.toString());
+            }
+            String hashPassword = hash(object.getString("newpassword"));
+            User user = getUser(login);
+            user.setPassword(hashPassword);
+            writeLog("password change", user.getLogin());
+            return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body("{}");
+        }
+        else {
+            JSONObject response = new JSONObject();
+            response.put("error", "Invalid body request");
+            return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(response.toString());
+        }
+    }
+
+    private void writeLog(String type, String login) {
+        JSONObject object = new JSONObject();
+        object.put("type",type);
+        object.put("login",login);
+        object.put("datetime",getCurrentDateTime());
+        log.add(object.toString());
+    }
+
+    @RequestMapping(method = RequestMethod.GET, path = "/log")
+    public ResponseEntity<String> getLogInfo(@RequestBody String data, @RequestHeader(name = "Authorization") String token) {
+        JSONObject object = new JSONObject(data);
+        if (object.has("login")) {
+            String login = object.getString("login");
+            User user = getUser(login);
+            if (user == null || !user.getToken().equals(token)) {
+                JSONObject response = new JSONObject();
+                response.put("error", "Invalid login or token");
+                return ResponseEntity.status(401).contentType(MediaType.APPLICATION_JSON).body(response.toString());
+            }
+            JSONArray response = new JSONArray();
+            for (String record : log) {
+                JSONObject temp = new JSONObject(record);
+                if (temp.has("login") && temp.getString("login").equals(login)) {
+                    response.put(temp);
+                }
+            }
+            return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body(response.toString());
+        }
+        else {
+            JSONObject response = new JSONObject();
+            response.put("error", "Invalid body request, login is missing");
+            return ResponseEntity.status(400).contentType(MediaType.APPLICATION_JSON).body(response.toString());
+        }
+    }
+
+    private String getCurrentDateTime(){
+        DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy HH:mm:ss");
+        Date date = new Date();
+        return(dateFormat.format(date));
     }
 }
