@@ -10,11 +10,5 @@ import java.util.Date;
 @RestController
 public class TimeController {
 
-    @RequestMapping("/time/hour")
-    public ResponseEntity<String> getHour() {
-        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("HH");
-        Date date = new Date();
-        String hour = simpleDateFormat.format(date);
-        return ResponseEntity.status(200).contentType(MediaType.APPLICATION_JSON).body("{\"hour\":" + hour + "}");
-    }
+
 }

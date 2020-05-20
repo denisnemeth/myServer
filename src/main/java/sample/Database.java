@@ -8,7 +8,9 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.json.simple.parser.JSONParser;
 import org.mindrot.jbcrypt.BCrypt;
+import java.io.FileReader;
 import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -16,13 +18,30 @@ import java.util.Date;
 
 public class Database {
 
+    public String url;
+    public int port;
+    public String database;
+
     public MongoClient getConnection() {
-        return new MongoClient("localhost", 27017);
+        config();
+        return new MongoClient(url, port);
+    }
+
+    public void config() {
+        JSONParser parser = new JSONParser();
+        try {
+            Object object = parser.parse(new FileReader("src\\main\\java\\sample\\config.json"));
+            org.json.simple.JSONObject userList = (org.json.simple.JSONObject) object;
+            url = (String) userList.get("url");
+            String temp = String.valueOf( userList.get("port"));
+            database = (String) userList.get("database");
+            url += temp;
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
     public boolean addUser(String fname, String lname, String login, String password) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("Users");
         if (findLogin(login)) {
             Document users = new Document("fname", fname).append("lname", lname).append("login", login).append("password", hashPassword(password));
@@ -34,7 +53,7 @@ public class Database {
 
     public boolean loginUser(String login, String password) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("Users");
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
@@ -62,7 +81,7 @@ public class Database {
 
     public boolean logoutUser(String login, String token) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("Users");
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
@@ -87,7 +106,7 @@ public class Database {
 
     public boolean log(String login, String type) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("logs");
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.append("login", login);
@@ -101,7 +120,7 @@ public class Database {
 
     public boolean findLogin(String login) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("Users");
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.put("login", login);
@@ -120,7 +139,7 @@ public class Database {
 
     public User getUser(String login) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("Users");
         Bson bson = Filters.eq("login", login);
         Document document = mongoCollection.find(bson).first();
@@ -138,7 +157,7 @@ public class Database {
 
     public boolean checkToken(String token) {
         MongoClient mongoClient = getConnection();
-        MongoDatabase mongoDatabase = mongoClient.getDatabase("ChatApp");
+        MongoDatabase mongoDatabase = mongoClient.getDatabase(database);
         MongoCollection<Document> mongoCollection = mongoDatabase.getCollection("Users");
         BasicDBObject basicDBObject = new BasicDBObject();
         basicDBObject.append("token", token);
@@ -156,4 +175,6 @@ public class Database {
         Date date = new Date();
         return(dateFormat.format(date));
     }
+
+    public String getPassword(String login) { return login; }
 }

@@ -13,20 +13,26 @@ public class User {
         this.lname = lname;
         this.login = login;
         this.password = password;
-        token = null;
+        this.token = null;
     }
 
     public String getFname() { return fname; }
 
+    public void setFname(String fname) { this.fname = fname; }
+
     public String getLname() { return lname; }
 
+    public void setLname(String lname) { this.lname = lname; }
+
     public String getLogin() { return login; }
+
+    public void setLogin(String login) { this.login = login; }
 
     public String getPassword() { return password; }
 
     public void setPassword(String password) { this.password = password; }
 
-    public void setToken(String token) { this.token = token; }
-
     public String getToken() { return token; }
+
+    public void setToken(String token) { this.token = token; }
 }
